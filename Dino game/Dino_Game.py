@@ -10,6 +10,7 @@ FLOOR_HEIGHT = 600
 OFFSET = 10
 game_active = False
 
+
 def test_function():
     print("Button clicked!")
 
@@ -224,8 +225,10 @@ class PowerUp(pygame.sprite.Sprite):
         self.image = self.powerup_animation.animation_list[self.powerup_animation.action][
             self.powerup_animation.animation_frame]
 
+
 class Button(pygame.sprite.Sprite):
-    def __init__(self, x, y, sprite_sheet_image, function, text, text_scale, button_scale, base_font_path, base_font_size, text_color=(0, 0, 0)):
+    def __init__(self, x, y, sprite_sheet_image, function, text, text_scale, button_scale, base_font_path,
+                 base_font_size, text_color=(0, 0, 0)):
         super().__init__()
         self.text_offset_y = 5
         self.sprite_sheet = SpriteSheet(sprite_sheet_image)
@@ -246,7 +249,8 @@ class Button(pygame.sprite.Sprite):
 
         # Scale the button image
         self.image_original = self.animation.animation_list[self.current_state][0]
-        self.image_original = pygame.transform.scale(self.image_original, (int(48 * self.button_scale), int(16 * self.button_scale)))
+        self.image_original = pygame.transform.scale(self.image_original,
+                                                     (int(48 * self.button_scale), int(16 * self.button_scale)))
         self.image = self.image_original.copy()
 
         self.rect = self.image.get_rect(center=(x, y))
@@ -282,7 +286,8 @@ class Button(pygame.sprite.Sprite):
             self.current_state = 0  # Normal state
 
         # Update the button image based on the current state
-        self.image_original = pygame.transform.scale(self.animation.animation_list[self.current_state][0], (int(48 * self.button_scale), int(16 * self.button_scale)))
+        self.image_original = pygame.transform.scale(self.animation.animation_list[self.current_state][0],
+                                                     (int(48 * self.button_scale), int(16 * self.button_scale)))
         self.render_text()  # Re-render the text onto the updated button image
 
     def check_for_click(self):
@@ -300,8 +305,6 @@ class Button(pygame.sprite.Sprite):
     def update(self):
         self.update_button_state()
         self.check_for_click()
-
-
 
 
 class Game:
@@ -338,7 +341,10 @@ class Game:
         self.reset_game()
 
     def load_assets(self):
-        self.image_list = [pygame.image.load('sheets/DinoSprites - mort.png').convert_alpha(), pygame.image.load('sheets/DinoSprites - doux.png').convert_alpha(), pygame.image.load('sheets/DinoSprites - tard.png').convert_alpha(), pygame.image.load('sheets/DinoSprites - vita.png').convert_alpha()]
+        self.image_list = [pygame.image.load('sheets/DinoSprites - mort.png').convert_alpha(),
+                           pygame.image.load('sheets/DinoSprites - doux.png').convert_alpha(),
+                           pygame.image.load('sheets/DinoSprites - tard.png').convert_alpha(),
+                           pygame.image.load('sheets/DinoSprites - vita.png').convert_alpha()]
         self.image_choice = random.choice(self.image_list)
         self.sheet_image = self.image_choice
         self.bg_music = pygame.mixer.Sound('audio/david deals with devils.wav')
@@ -381,7 +387,7 @@ class Game:
 
     def display_powerups(self):
         # Display the current number of powerups under the score
-        powerup_text = self.test_font.render(f'Powerups: {self.player.circle_uses_left}', False, (255,255,255))
+        powerup_text = self.test_font.render(f'Powerups: {self.player.circle_uses_left}', False, (255, 255, 255))
         powerup_rect = powerup_text.get_rect(topleft=(20, 80))
         self.screen.blit(powerup_text, powerup_rect)
 
@@ -398,7 +404,7 @@ class Game:
 
         highscore = self.get_highscore()
         highscore_text = self.test_font.render(f'High Score: {highscore}', True, (BACKGROUND_COLOR))
-        highscore_rect = highscore_text.get_rect(center=(self.SCREEN_WIDTH / 2, (self.SCREEN_HEIGHT / 2 ) + 300 ))
+        highscore_rect = highscore_text.get_rect(center=(self.SCREEN_WIDTH / 2, (self.SCREEN_HEIGHT / 2) + 300))
 
         self.screen.fill((26, 15, 28))  # Fill the screen with the menu color
         self.screen.blit(menu_text, menu_rect)  # Draw the menu text
@@ -604,7 +610,6 @@ class Game:
             else:
                 self.display_menu()  # Display the main menu when the game is not active
             # The display should be updated once after all drawing operations
-
 
             pygame.display.update()
             self.clock.tick(60)  # Maintain the game's frame rate

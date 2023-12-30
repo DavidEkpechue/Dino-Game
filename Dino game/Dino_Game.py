@@ -1,7 +1,8 @@
-import pygame
-from sys import exit
-from Animate_Sprites import SpriteSheet, Animation, Animation2
-import random
+from Player import *
+from Rocket import *
+from Missile import *
+from PowerUp import *
+from Button import *
 
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 700
@@ -9,302 +10,6 @@ BACKGROUND_COLOR = (105, 55, 55)
 FLOOR_HEIGHT = 600
 OFFSET = 10
 game_active = False
-
-
-def test_function():
-    print("Button clicked!")
-
-
-class Player(pygame.sprite.Sprite):
-    def __init__(self, sprite_sheet_image):
-        super().__init__()
-        # Load the sprite sheet
-        self.sprite_sheet = SpriteSheet(sprite_sheet_image)
-
-        # Define the number of frames in each animation action
-        animation_frame_counts = [4, 6, 3, 4, 7]
-
-        # Initialize the animation with the provided sprite sheet
-        self.animation = Animation(self.sprite_sheet, animation_frame_counts, 24, 24)
-
-        # Set the initial image
-        self.image = self.animation.animation_list[0][0]
-
-        # Player's initial setup
-        self.offset = OFFSET
-        self.rect = self.image.get_rect(midbottom=(80, FLOOR_HEIGHT + self.offset))
-        self.gravity = 0
-        self.jump_sound = pygame.mixer.Sound('audio/jump.mp3')
-        self.jump_sound.set_volume(0.2)
-        self.facing_right = True
-        self.lives = 3
-        self.invulnerable = False
-        self.invulnerability_duration = 360
-        self.invulnerability_timer = 0
-        self.hurt_animation = False
-        self.circle_active = False
-        self.circle_radius = 0
-        self.circle_duration = 300  # seconds in milliseconds
-        self.circle_start_time = 0
-        self.circle_uses_left = 3
-        self.game_active = False
-
-        self.game_start_time = pygame.time.get_ticks()
-
-        # Add any additional initialization as needed
-
-    def player_input(self):
-        if self.game_active:  # Only process input if the game is active
-            if not self.invulnerable:  # Only handle input if not in hurt animation
-                keys = pygame.key.get_pressed()
-                mods = pygame.key.get_mods()  # Get the current state of all modifier keys
-                mouse_buttons = pygame.mouse.get_pressed()
-
-                if keys[pygame.K_SPACE] and self.rect.bottom >= FLOOR_HEIGHT + self.offset:
-                    self.gravity = -17
-                    self.animation.change_action(2)  # Change to the jump animation
-
-                # Check for running (Shift + A/D)
-                elif keys[pygame.K_d] and mods & pygame.KMOD_SHIFT:
-                    self.rect.x += 7
-                    self.animation.change_action(4)  # Change to the run animation
-                    self.facing_right = True
-                elif keys[pygame.K_a] and mods & pygame.KMOD_SHIFT:
-                    self.rect.x -= 7
-                    self.animation.change_action(4)  # Change to the run animation
-                    self.facing_right = False
-
-                # Check for walking (A/D without Shift)
-                elif keys[pygame.K_d]:
-                    self.rect.x += 4
-                    self.animation.change_action(1)  # Change to the walk animation
-                    self.facing_right = True
-                elif keys[pygame.K_a]:
-                    self.rect.x -= 4
-                    self.animation.change_action(1)  # Change to the walk animation
-                    self.facing_right = False
-
-                elif keys[pygame.K_p]:
-                    self.animation.change_action(3)
-
-                # Reset to idle animation if no movement
-                else:
-                    self.animation.change_action(0)  # Change to the idle animation
-
-                if mouse_buttons[0] and not self.circle_active:  # Left mouse button is index 0
-                    self.activate_circle()
-
-                if self.rect.x > SCREEN_WIDTH:
-                    self.rect.x = 0
-                if self.rect.x < 0:
-                    self.rect.x = SCREEN_WIDTH
-
-    def take_damage(self):
-        if not self.invulnerable:
-            self.lives -= 1
-            self.invulnerable = True
-            self.invulnerability_timer = pygame.time.get_ticks()
-            self.animation.change_action(3)  # Switch to the hurt animation
-
-    def activate_circle(self):
-        current_time = pygame.time.get_ticks()
-        if self.circle_active is False and self.circle_uses_left > 0 and (current_time - self.game_start_time) > 1000:
-            self.circle_active = True
-            self.circle_radius = 0
-            self.circle_start_time = current_time
-            self.circle_uses_left -= 1
-
-    def update_circle(self):
-        if self.circle_active:
-            current_time = pygame.time.get_ticks()
-            if current_time - self.circle_start_time < self.circle_duration:
-                self.circle_radius += 22  # Increase the radius over time
-            else:
-                self.circle_active = False  # Deactivate the circle after 3 seconds
-
-    def update_invulnerability(self):
-        if self.invulnerable:
-            current_time = pygame.time.get_ticks()
-            if current_time - self.invulnerability_timer > self.invulnerability_duration:
-                self.invulnerable = False
-                self.animation.change_action(0)  # Switch back to idle or another appropriate animation
-
-    def play_hurt_animation(self):
-        while self.hurt_animation:
-            self.animation.change_action(3)
-
-    def apply_gravity(self):
-        self.gravity += 1
-        self.rect.y += self.gravity
-        if self.rect.bottom >= FLOOR_HEIGHT + self.offset:
-            self.rect.bottom = FLOOR_HEIGHT + self.offset
-
-    def flip(self):
-        if not self.facing_right:
-            self.image = pygame.transform.flip(self.image, True, False).convert_alpha()  # Flip horizontally
-
-    def update(self):
-        self.player_input()
-        self.apply_gravity()
-        self.animation.update()
-        self.update_invulnerability()
-        self.image = self.animation.animation_list[self.animation.action][self.animation.animation_frame]
-        self.update_circle()
-        if self.invulnerable:
-            self.animation.change_action(3)  # Ensure the hurt animation is played if invulnerable
-
-        self.flip()
-
-
-class Rocket(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
-        self.image = pygame.image.load('graphics/Rockets/Rocket_001.png').convert_alpha()
-        scale = 3
-        self.image = pygame.transform.scale(self.image, (32 * scale, 16 * scale))
-        self.image = pygame.transform.rotate(self.image, 90)
-        # Start the rocket at a random x position at the top of the screen
-        self.rect = self.image.get_rect(midtop=(random.randint(0, SCREEN_WIDTH), -100))
-        self.gravity = 0
-        self.hit = False  # Add this line
-
-    def apply_gravity(self):
-        self.gravity += 0.5  # Adjust gravity for a more realistic fall
-        self.rect.y += self.gravity
-        if self.rect.y > FLOOR_HEIGHT - 85:
-            self.kill()  # Remove the rocket if it goes off the bottom of the screen
-
-    def update(self):
-        self.apply_gravity()
-
-
-class Missile(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
-        self.image = pygame.image.load('graphics/Rockets/Rocket_005.png').convert_alpha()
-        scale = 2.5
-        self.image = pygame.transform.scale(self.image, (32 * scale, 16 * scale))
-        # Start the rocket at a random x position at the top of the screen
-        self.rect = self.image.get_rect(midbottom=(SCREEN_WIDTH, random.randint(FLOOR_HEIGHT - 100, FLOOR_HEIGHT)))
-        self.hit = False  # Add this line
-
-    def fly(self):
-        self.rect.x -= 15
-        if self.rect.x < 0:
-            self.kill()  # Remove the rocket if it goes off the bottom of the screen
-
-    def update(self):
-        self.fly()
-
-
-class PowerUp(pygame.sprite.Sprite):
-    def __init__(self, sprite_sheet_image):  # Accept the sprite sheet image as an argument
-        super().__init__()
-        # Load the sprite sheet for the Blue Crystal power-up
-        self.sprite_sheet = SpriteSheet(sprite_sheet_image)
-
-        # The Blue Crystal has 8 frames in its animation
-        powerup_animation_frame_count = [8]
-
-        # Initialize the animation
-        self.powerup_animation = Animation2(self.sprite_sheet, powerup_animation_frame_count)
-
-        # Set the initial image and rect
-        self.image = self.powerup_animation.animation_list[0][0]
-
-        # Assuming the power-up should appear above the floor, adjust the y-coordinate
-        powerup_height = self.image.get_height()
-        floor_y_position = FLOOR_HEIGHT - powerup_height  # Adjust so the bottom of the power-up is on the floor
-
-        # Set the rect with random x position and y position at the floor
-        self.rect = self.image.get_rect(midbottom=(random.randint(0, SCREEN_WIDTH), floor_y_position))
-
-    def update(self):
-        # Update the animation - the attribute name should match the initialization
-        self.powerup_animation.update()
-        self.image = self.powerup_animation.animation_list[self.powerup_animation.action][
-            self.powerup_animation.animation_frame]
-
-
-class Button(pygame.sprite.Sprite):
-    def __init__(self, x, y, sprite_sheet_image, function, text, text_scale, button_scale, base_font_path,
-                 base_font_size, text_color=(0, 0, 0)):
-        super().__init__()
-        self.text_offset_y = 5
-        self.sprite_sheet = SpriteSheet(sprite_sheet_image)
-        self.function = function
-        self.text = text
-        self.text_color = text_color
-        self.is_clicked = False
-        self.button_scale = button_scale
-        self.delay = None
-        self.last_click_time = 0
-
-        # Three states: normal, clicked, hovered
-        animation_frame_counts = [1, 1, 1]
-
-        # Initialize the animation with the provided sprite sheet
-        self.animation = Animation(self.sprite_sheet, animation_frame_counts, 48, 16)
-        self.current_state = 0
-
-        # Scale the button image
-        self.image_original = self.animation.animation_list[self.current_state][0]
-        self.image_original = pygame.transform.scale(self.image_original,
-                                                     (int(48 * self.button_scale), int(16 * self.button_scale)))
-        self.image = self.image_original.copy()
-
-        self.rect = self.image.get_rect(center=(x, y))
-
-        # Text rendering with scaling
-        scaled_font_size = int(base_font_size * text_scale)
-        self.font = pygame.font.Font(base_font_path, scaled_font_size)
-        self.render_text()
-
-    def render_text(self):
-        # Render the text onto a separate surface
-        text_surface = self.font.render(self.text, True, self.text_color)
-
-        # Calculate the position to center the text on the button
-        text_x = (self.image.get_width() - text_surface.get_width()) // 2
-        text_y = ((self.image.get_height() - text_surface.get_height()) // 2) - self.text_offset_y
-
-        # Clear the button image and then blit the text onto it
-        self.image = self.image_original.copy()
-        self.image.blit(text_surface, (text_x, text_y))
-
-    def update_button_state(self):
-        mouse_pos = pygame.mouse.get_pos()
-        mouse_pressed = pygame.mouse.get_pressed()
-
-        # Change state based on mouse position and click status
-        if self.rect.collidepoint(mouse_pos):
-            if mouse_pressed[0]:  # Mouse is pressed over the button
-                self.current_state = 1  # Clicked state
-            else:
-                self.current_state = 2  # Hover state
-        else:
-            self.current_state = 0  # Normal state
-
-        # Update the button image based on the current state
-        self.image_original = pygame.transform.scale(self.animation.animation_list[self.current_state][0],
-                                                     (int(48 * self.button_scale), int(16 * self.button_scale)))
-        self.render_text()  # Re-render the text onto the updated button image
-
-    def check_for_click(self):
-        mouse_pos = pygame.mouse.get_pos()
-        mouse_pressed = pygame.mouse.get_pressed()
-
-        if self.rect.collidepoint(mouse_pos) and mouse_pressed[0]:
-            self.is_clicked = True
-        else:
-            self.is_clicked = False
-
-        if self.is_clicked:
-            self.function()
-
-    def update(self):
-        self.update_button_state()
-        self.check_for_click()
 
 
 class Game:
@@ -446,9 +151,24 @@ class Game:
         self.powerup_group.empty()
         self.missiles_started = False
 
-        # Any additional resetting needed for the game...
-
     def check_collisions(self):
+        # Check if the player has collected any powerups
+        if pygame.sprite.spritecollide(self.player, self.powerup_group, True):
+            self.player.circle_uses_left += 1  # Increase the circle uses
+
+        if self.player.circle_active:
+            # Check for collision with rockets
+            for rocket in self.obstacle_group.sprites():
+                distance = pygame.math.Vector2(rocket.rect.center) - pygame.math.Vector2(self.player.rect.center)
+                if distance.length() < self.player.circle_radius:
+                    rocket.kill()  # Remove the rocket if it touches the circle
+
+            # Check for collision with missiles
+            for missile in self.missile_group.sprites():
+                distance = pygame.math.Vector2(missile.rect.center) - pygame.math.Vector2(self.player.rect.center)
+                if distance.length() < self.player.circle_radius:
+                    missile.kill()  # Remove the missile if it touches the circle
+
         # Check for collision with rockets
         if pygame.sprite.spritecollide(self.player, self.obstacle_group, True) and not self.player.invulnerable:
             self.player.take_damage()
@@ -468,25 +188,6 @@ class Game:
     def spawn_powerup(self):
         new_powerup = PowerUp(self.powerup_sheet_image)
         self.powerup_group.add(new_powerup)
-
-    def check_powerup_collisions(self):
-        # Check if the player has collected any powerups
-        if pygame.sprite.spritecollide(self.player, self.powerup_group, True):
-            self.player.circle_uses_left += 1  # Increase the circle uses
-
-    def check_circle_collisions(self):
-        if self.player.circle_active:
-            # Check for collision with rockets
-            for rocket in self.obstacle_group.sprites():
-                distance = pygame.math.Vector2(rocket.rect.center) - pygame.math.Vector2(self.player.rect.center)
-                if distance.length() < self.player.circle_radius:
-                    rocket.kill()  # Remove the rocket if it touches the circle
-
-            # Check for collision with missiles
-            for missile in self.missile_group.sprites():
-                distance = pygame.math.Vector2(missile.rect.center) - pygame.math.Vector2(self.player.rect.center)
-                if distance.length() < self.player.circle_radius:
-                    missile.kill()  # Remove the missile if it touches the circle
 
     def highscore(self, current_score):
         highscore_file = 'highscore.txt'
@@ -566,13 +267,9 @@ class Game:
             self.obstacle_time = 1200  # Reset to initial value or another value as per game design
             pygame.time.set_timer(self.obstacle_timer, self.obstacle_time)  # Reset the timer with the new interval
 
-        # Check for rocket-circle collisions
-        self.check_circle_collisions()
-
         # Ensure missiles are being updated
         self.missile_group.update()
 
-        self.check_powerup_collisions()
         self.powerup_group.update()  # Update the power-ups
 
         # Start spawning missiles after the score reaches 60
